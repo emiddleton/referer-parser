@@ -15,6 +15,7 @@ _Note that we always use the original HTTP misspelling of 'referer' (and thus 'r
 * Python: [Don Spaulding] [donspaulding] 
 * .NET: [Sepp Wijnands] [swijnands] at [iPerform Software] [iperform]
 * `referers.yml`: [Snowplow Analytics] [snowplow-analytics]
+* Go: [Edward Middleton] [emiddleton]
 
 ## Usage: Java
 
@@ -121,6 +122,28 @@ Console.WriteLine(r.Term); // => "gateway oracle cards denise linn"
 
 For more information, please see the .NET [README] [dotnet-readme].
 
+## Usage: Go
+
+The Go version of this library uses the updated API, and identifies search, social, webmail, internal and unknown referers:
+
+```Go
+package main
+
+import (
+  "github.com/emiddleton/referer-parser/golang"
+  "net/url"
+)
+
+func main(){
+  url,_ := url.Parse("http://www.google.com/search?q=gateway+oracle+cards+denise+linn&hl=en&client=safari")
+  ref = referer.Get(url)
+
+  fmt.Printf("%#v",ref.Medium) // => "search"
+  fmt.Printf("%#v",ref.Source) // => "Google"
+  fmt.Printf("%#v",ref.Term)   // => "gateway oracle cards denise linn"
+}
+```
+
 ## referers.yml
 
 referer-parser identifies whether a URL is a known referer or not by checking it against the [`referers.yml`] [referers-yml] file; the intention is that this YAML file is reusable as-is by every language-specific implementation of referer-parser.
@@ -165,6 +188,7 @@ You can contact the Snowplow Analytics team through any of the [channels listed 
 
 `referers.yml` is based on [Piwik's] [piwik] [`SearchEngines.php`] [piwik-search-engines] and [`Socials.php`] [piwik-socials], copyright 2012 Matthieu Aubry and available under the [GNU General Public License v3] [gpl-license].
 
+The original Go code is copyright 2012-2013 [Edward Middleton] [emiddleton] under the [MIT]
 The original Ruby code is copyright 2012-2013 Snowplow Analytics Ltd and is available under the [Apache License, Version 2.0] [apache-license].
 
 The Java/Scala port is copyright 2012-2013 Snowplow Analytics Ltd and is available under the [Apache License, Version 2.0] [apache-license].
@@ -179,6 +203,7 @@ The .NET port is copyright 2013 [iPerform Software] [iperform] and is available 
 [snowplow-analytics]: http://snowplowanalytics.com
 [donspaulding]: https://github.com/donspaulding
 [swijnands]: https://github.com/swijnands
+[emiddleton]: https://github.com/emiddleton
 [iperform]: http://www.iperform.nl/
 
 [piwik]: http://piwik.org
@@ -195,3 +220,4 @@ The .NET port is copyright 2013 [iPerform Software] [iperform] and is available 
 
 [apache-license]: http://www.apache.org/licenses/LICENSE-2.0
 [gpl-license]: http://www.gnu.org/licenses/gpl-3.0.html
+[MIT]: http://opensource.org/licenses/MIT
