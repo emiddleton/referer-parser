@@ -26,16 +26,60 @@ module RefererParser
     # the given `uri`
     def self.get_referer(uri)
       # Check if domain+path matches (e.g. google.co.uk/products)
-      referer = @referers[uri.host + uri.path]
-      if referer.nil?
+      refl = lookup_referer(uri.host, uri.path, true)
+      if refl.nil?
         # Check if domain only matches (e.g. google.co.uk)
-        referer = @referers[uri.host]
+        refl = lookup_referer(uri.host, uri.path, false)
       end
-      referer
+      if refl.nil?
+        return RefererParser::Referer.new(uri, "unknown")
+      else
+        if refl["medium"] == "search" and !uri.query.nil?
+          return RefererParser::Referer.new(uri, "search", refl["source"], extract_search(uri.query, refl["parameters"]))
+        end
+        return RefererParser::Referer.new(uri, refl["medium"], refl["source"])
+      end
+    end
+
+    def self.lookup_referer(host,path,include_path=true)
+      #puts "lookup host=>#{host}, path=>#{path}, include_path=>#{include_path}"
+      refl =
+        if include_path
+          referers[host+path]
+        else
+          referers[host]
+        end
+      if include_path and refl.nil?
+        path_elements = path.split("/")
+        refl =
+          if path_elements.length > 1
+            referers[host+"/"+path_elements[1]]
+          end
+      end
+      if refl.nil?
+        idx = host.index('.')
+        if idx.nil?
+          return nil
+        else
+          return lookup_referer(host[(idx+1)..-1],path,include_path)
+        end
+      end
+      return refl
+    end
+
+    def self.extract_search(queries, possiables)
+      CGI.parse(queries).each do |key,value|
+        return value.first if possiables.include?(key)
+      end
     end
 
     private # -------------------------------------------------------------
-    
+
+    def self.referers
+      @@referers ||= load_referers_from_yaml(get_yaml_file)
+      @@referers
+    end
+
     # Returns the path to the YAML
     # file of referers
     def self.get_yaml_file(referer_file = nil)
@@ -49,43 +93,47 @@ module RefererParser
     # Initializes a hash of referers
     # from the supplied YAML file
     def self.load_referers_from_yaml(yaml_file)
-      
+
       unless File.exist?(yaml_file) and File.file?(yaml_file)
         raise ReferersYamlNotFoundError, "Could not find referers YAML file at '#{yaml_file}'"
       end
 
       # Load referer data stored in YAML file
       begin
-        yaml = YAML.load_file(yaml_file)['search'] # TODO: fix this when we support the other types
+        referers_yaml = YAML.load_file(yaml_file)
       rescue error
         raise CorruptReferersYamlError.new("Could not parse referers YAML file '#{yaml_file}'", error)
       end
-      @referers = load_referers(yaml)
+
+      refs = {}
+      referers_yaml.each do |medium_name,medium|
+        medium.each do |source_name,source|
+          parameters = source["parameters"]
+          refl = { "medium" => medium_name,
+                   "source" => source_name }
+          if medium_name == "search"
+            if parameters.nil?
+              raise "No parameters found for search referer '#{source_name}'"
+            else
+              refl["parameters"] = parameters
+            end
+          else
+            unless parameters.nil?
+              raise "Parameters not supported for non-search referer '#{source_name}'"
+            end
+          end
+          domains = source["domains"]
+          if domains.empty?
+            raise "No domains found for referer '#{source_name}'"
+          end
+          domains.each do |domain|
+            refs[domain] = refl
+          end
+        end
+      end
+      refs
+
     end
 
-    # Validate and expand the `raw_referers`
-    # array, building a hash of referers as
-    # we go
-    def self.load_referers(raw_referers)
-
-      # Validate the YAML file, building the lookup
-      # hash of referer domains as we go
-      referers = Hash.new
-      raw_referers.each { | referer, data |
-        if data['parameters'].nil?
-          raise CorruptReferersYamlError, "No parameters found for referer '#{referer}'"
-        end
-        if data['domains'].nil? 
-          raise CorruptReferersYamlError, "No domains found for referer '#{referer}'"
-        end
-        
-        data['domains'].each do | domain |
-          domain_pair = { domain => { "name" => referer,
-                                      "parameters" => data['parameters']}}
-          referers.merge!(domain_pair)
-        end
-      }
-      return referers 
-    end
   end
 end
