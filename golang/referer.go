@@ -10,7 +10,7 @@ import (
 )
 
 type RefererLookup struct {
-  Medium     string
+	Medium     string
 	Source     string
 	Parameters []string
 }
@@ -18,13 +18,13 @@ type RefererLookup struct {
 type Referers map[string]RefererLookup
 
 type Referer struct {
-  Medium     string
+	Medium     string
 	Source     string
 	Term       string
 }
 
 var (
-	file = flag.String("file", "referers.yml", "Referer parser data")
+	referers_yml_file = flag.String("referers_yml", "referers.yml", "Referer parser data")
 	referers = Referers{}
 )
 
@@ -39,21 +39,21 @@ func Get(uri *url.URL) (ref Referer, err error) {
 		refl, found = lookupReferer(uri.Host, uri.Path, false)
 	}
 
-  if !found {
-    return Referer{Medium:"unknown"}, nil
-  } else {
-    if refl.Medium == "search" {
+	if !found {
+		return Referer{Medium:"unknown"}, nil
+	} else {
+		if refl.Medium == "search" {
 			term, _ := extractSearchTerm(uri, refl.Parameters)
 			return Referer{Medium:"search", Source:refl.Source, Term:term}, nil
-    }
-	  return Referer{Medium:refl.Medium, Source: refl.Source}, err
-  }
+		}
+		return Referer{Medium:refl.Medium, Source: refl.Source}, err
+	}
 }
 
 func lookupReferer(host string, path string, include_path bool) (refl RefererLookup, found bool) {
 
 	ok := false
-	
+
 	if include_path {
 		refl, ok = referers[host+path]
 	} else {
@@ -81,7 +81,7 @@ func lookupReferer(host string, path string, include_path bool) (refl RefererLoo
 func extractSearchTerm(url *url.URL, possiables []string) (term string, ok bool) {
 	for name, value := range url.Query() {
 		for _, possiable := range possiables {
-		  if name == possiable {
+			if name == possiable {
 				return value[0], true;
 			}
 		}
@@ -91,20 +91,20 @@ func extractSearchTerm(url *url.URL, possiables []string) (term string, ok bool)
 
 func init() {
 
-	referers_yaml,err := yaml.ReadFile(*file)
+	referers_yml,err := yaml.ReadFile(*referers_yml_file)
 	if err != nil {
-		log.Fatalf("readfile(%q): %s", *file, err)
+		log.Fatalf("readfile(%q): %s", *referers_yml_file, err)
 	}
-	m,e := referers_yaml.Root.(yaml.Map)
+	m,e := referers_yml.Root.(yaml.Map)
 	if !e {
-		log.Fatalf("Root(%q): %s", *file, err)
+		log.Fatalf("Root(%q): %s", *referers_yml_file, err)
 	}
 
 	for medium, medium_map := range m {
 		for source, source_node := range medium_map.(yaml.Map) {
-			
+
 			parameters := []string{}
-			
+
 			terms_node := source_node.(yaml.Map).Key("parameters")
 			if terms_node != nil {
 				for _, term_node := range terms_node.(yaml.List) {
@@ -135,7 +135,7 @@ func init() {
 				if !ok {
 				//	panic("Duplicate of domain '" + domain + "' found")
 				//} else {
-				  referers[domain] = referer
+					referers[domain] = referer
 				}
 			}
 		}
